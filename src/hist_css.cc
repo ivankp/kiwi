@@ -19,11 +19,19 @@ using namespace std;
 
 // Properties *******************************************************
 
-enum prop_t { kBins, kLineColor, kLineWidth };
+enum prop_t { kClass, kBins, kLineColor, kLineWidth };
 
 struct prop {
   virtual void apply(TH1* h) const =0;
   virtual ~prop() { }
+};
+
+struct prop_Class: public prop {
+  string name;
+  prop_Class(const string& name): name(name) { }
+  virtual ~prop_Class() { }
+  // this property is used for construction of TH1
+  virtual void apply(TH1* h) const { }
 };
 
 struct prop_Bins: public prop {
@@ -82,7 +90,10 @@ pair<prop_t,const prop*> mkprop(const string& str) {
     boost::algorithm::trim_copy(str.substr(sep+1))
   );
 
-  if (!ps.first.compare("Bins")) {
+  if (!ps.first.compare("Class")) {
+    type = kClass;
+    p = new const prop_Class(ps.second);
+  } else if (!ps.first.compare("Bins")) {
     type = kBins;
     p = new const prop_Bins_range(ps.second);
   } else if (!ps.first.compare("Bins*")) {
@@ -143,6 +154,14 @@ csshists::csshists(const string& cssfilename)
           brak=false;
           // remove whitespace from last property string
           boost::algorithm::trim(rule_str.back().second.back());
+          // ref to last rule string
+          string& last_rule = rule_str.back().first;
+          // remove whitespace from last rule string
+          boost::algorithm::trim(last_rule);
+          // unquote last rule string
+          if ( (last_rule[0]=='\''&&(*(last_rule.end()-1))=='\'') ||
+               (last_rule[0]=='\"'&&(*(last_rule.end()-1))=='\"') )
+            last_rule = last_rule.substr(1,last_rule.size()-2);
           // start new rule
           rule_str.push_back(pair< string, vector<string> >());
           continue;
@@ -208,28 +227,28 @@ csshists::csshists(const string& cssfilename)
 
 // Make Historgram **************************************************
 
-TH1* csshists::mkhist(const std::string& name) const {
+TH1* csshists::mkhist(const string& name) const {
   prop_map props;
   TH1* h;
 
   boost::smatch result;
   for (impl::iter it=_impl->rules.begin(),
        end=_impl->rules.end();it!=end;++it) {
-    test(name)
-    test(it->first->str())
-    if (boost::regex_match(name, result, *it->first,
-                           boost::match_default | boost::match_partial))
-      if(result[0].matched) {
-        test(it->first->str())
-        for (prop_map::iterator jt=it->second->begin(),
-             end2=it->second->end();jt!=end2;++jt)
-          props[jt->first] = jt->second;
-      }
+    if (boost::regex_match(name, result, *it->first)) {
+      for (prop_map::iterator jt=it->second->begin(),
+           end2=it->second->end();jt!=end2;++jt)
+        props[jt->first] = jt->second;
+    }
   }
 
   if (!props.size()) throw runtime_error(
     "no rules matched for histogram \""+name+"\""
   );
+
+  if (!props.count(kClass)) throw runtime_error(
+    "cannot find class for histogram \""+name+"\""
+  );
+  string class_name(static_cast<const prop_Class*>(props[kClass])->name);
 
   if (!props.count(kBins)) throw runtime_error(
     "cannot find binning for histogram \""+name+"\""
@@ -238,14 +257,39 @@ TH1* csshists::mkhist(const std::string& name) const {
     const prop_Bins_range* b
       = static_cast<const prop_Bins_range*>(props[kBins]);
 
-    h = new TH1F(name.c_str(),"",b->nbinsx,b->xlow,b->xup);
+    if (!class_name.compare("TH1F")) {
+      h = new TH1F(name.c_str(),"",b->nbinsx,b->xlow,b->xup);
+    } else if (!class_name.compare("TH1D")) {
+      h = new TH1D(name.c_str(),"",b->nbinsx,b->xlow,b->xup);
+    } else if (!class_name.compare("TH1I")) {
+      h = new TH1I(name.c_str(),"",b->nbinsx,b->xlow,b->xup);
+    } else if (!class_name.compare("TH1C")) {
+      h = new TH1C(name.c_str(),"",b->nbinsx,b->xlow,b->xup);
+    } else if (!class_name.compare("TH1S")) {
+      h = new TH1S(name.c_str(),"",b->nbinsx,b->xlow,b->xup);
+    } else throw runtime_error(
+      "undefined histogram class "+class_name
+    );
 
   } else {
     const prop_Bins_vals* b
       = static_cast<const prop_Bins_vals*>(props[kBins]);
 
-    h = new TH1F(name.c_str(),"",b->xbins.size(),&b->xbins[0]);
+    if (!class_name.compare("TH1F")) {
+      h = new TH1F(name.c_str(),"",b->xbins.size()-1,&b->xbins[0]);
+    } else if (!class_name.compare("TH1D")) {
+      h = new TH1D(name.c_str(),"",b->xbins.size()-1,&b->xbins[0]);
+    } else if (!class_name.compare("TH1I")) {
+      h = new TH1I(name.c_str(),"",b->xbins.size()-1,&b->xbins[0]);
+    } else if (!class_name.compare("TH1C")) {
+      h = new TH1C(name.c_str(),"",b->xbins.size()-1,&b->xbins[0]);
+    } else if (!class_name.compare("TH1S")) {
+      h = new TH1S(name.c_str(),"",b->xbins.size()-1,&b->xbins[0]);
+    } else throw runtime_error(
+      "undefined histogram class "+class_name
+    );
   }
+  props.erase(kClass);
   props.erase(kBins);
 
   for (prop_map::iterator it=props.begin(),end=props.end();it!=end;++it)

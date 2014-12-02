@@ -1,5 +1,17 @@
-hist {
-  Bins: 100 0 10;
+.* {
+  Class: TH1F;
+  Bins: 100 1 10;
+}
+
+.*_red {
   LineColor: 46;
+}
+
+thick_.* {
   LineWidth: 2;
+}
+
+hist {
+  Class: TH1D;
+  Bins*: 2 3 4 5;
 }
