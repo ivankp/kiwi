@@ -21,6 +21,41 @@ using namespace std;
 
 enum prop_t { kClass, kBins, kLineColor, kLineWidth };
 
+/*
+
+virtual void	TAttFill::SetFillColor(Color_t fcolor)
+virtual void	TAttFill::SetFillColorAlpha(Color_t fcolor, Float_t falpha)
+virtual void	TAttFill::SetFillStyle(Style_t fstyle)
+virtual void	TH1::SetLabelColor(Color_t color = 1, Option_t* axis = "X")
+virtual void	TH1::SetLabelFont(Style_t font = 62, Option_t* axis = "X")
+virtual void	TH1::SetLabelOffset(Float_t offset = 0.005, Option_t* axis = "X")
+virtual void	TH1::SetLabelSize(Float_t size = 0.02, Option_t* axis = "X")
+virtual void	TAttLine::SetLineColor(Color_t lcolor)
+virtual void	TAttLine::SetLineColorAlpha(Color_t lcolor, Float_t lalpha)
+virtual void	TAttLine::SetLineStyle(Style_t lstyle)
+virtual void	TAttLine::SetLineWidth(Width_t lwidth)
+virtual void	TAttMarker::SetMarkerColor(Color_t mcolor = 1)
+virtual void	TAttMarker::SetMarkerColorAlpha(Color_t mcolor, Float_t malpha)
+virtual void	TAttMarker::SetMarkerSize(Size_t msize = 1)
+virtual void	TAttMarker::SetMarkerStyle(Style_t mstyle = 1)
+virtual void	TH1::SetMaximum(Double_t maximum = -1111)
+virtual void	TH1::SetMinimum(Double_t minimum = -1111)
+virtual void	TH1::SetName(const char* name)MENU
+virtual void	TH1::SetNameTitle(const char* name, const char* title)
+virtual void	TH1::SetNdivisions(Int_t n = 510, Option_t* axis = "X")
+virtual void	TH1::SetNormFactor(Double_t factor = 1)
+virtual void	TH1::SetOption(Option_t* option = " ")
+virtual void	TH1::SetStats(Bool_t stats = kTRUE)
+virtual void	TH1::SetTickLength(Float_t length = 0.02, Option_t* axis = "X")
+virtual void	TH1::SetTitle(const char* title)MENU
+virtual void	TH1::SetTitleFont(Style_t font = 62, Option_t* axis = "X")
+virtual void	TH1::SetTitleOffset(Float_t offset = 1, Option_t* axis = "X")
+virtual void	TH1::SetTitleSize(Float_t size = 0.02, Option_t* axis = "X")
+virtual void	TH1::SetXTitle(const char* title)
+virtual void	TH1::SetYTitle(const char* title)
+
+*/
+
 struct prop {
   virtual void apply(TH1* h) const =0;
   virtual ~prop() { }
