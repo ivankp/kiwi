@@ -45,7 +45,7 @@ obj/test_hist_css.o: obj/%.o: test/%.cc
 # executable rules
 bin/test_hist_css: bin/%: obj/%.o
 	@echo -e "Linking \E[0;49;92m"$@"\E[0;0m"
-	@$(CPP) $(filter %.o,$^) -o $@ $(ROOT_LIBS) -Llib -lmithhist -lboost_regex
+	@$(CPP) -Wl,--no-as-needed $(filter %.o,$^) -o $@ $(ROOT_LIBS) -Llib -lmithhist -lboost_regex
 
 # OBJ dependencies
 

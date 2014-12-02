@@ -2,10 +2,12 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <stdexcept>
 
 #include <boost/regex.hpp>
+#include <boost/unordered_map.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <TH1.h>
@@ -15,27 +17,110 @@ using namespace std;
 #define test(var) \
   cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << endl;
 
-// Functions ********************************************************
-
-
 // Properties *******************************************************
 
+enum prop_t { kBins, kLineColor, kLineWidth };
+
 struct prop {
-  string str;
-  prop(const string& str): str(str) { }
+  virtual void apply(TH1* h) const =0;
+  virtual ~prop() { }
 };
+
+struct prop_Bins: public prop {
+  bool isrange;
+  prop_Bins(bool isrange): isrange(isrange) { }
+  virtual ~prop_Bins() { }
+  // this property is used for construction of TH1
+  virtual void apply(TH1* h) const { }
+};
+
+struct prop_Bins_range: public prop_Bins {
+  Double_t nbinsx, xlow, xup;
+  prop_Bins_range(const string& str): prop_Bins(true) {
+    stringstream ss(str);
+    ss >> nbinsx >> xlow >> xup;
+  }
+};
+
+struct prop_Bins_vals: public prop_Bins {
+  vector<Double_t> xbins;
+  prop_Bins_vals(const string& str): prop_Bins(false) {
+    stringstream ss(str);
+    Double_t bin;
+    while(ss >> bin) xbins.push_back(bin);
+  }
+};
+
+struct prop_int: public prop {
+  int x;
+  prop_int(const string& str): x( atoi(str.c_str()) ) { }
+  virtual ~prop_int() { }
+  virtual void apply(TH1* h) const =0;
+};
+
+struct prop_LineColor: public prop_int {
+  prop_LineColor(const string& str): prop_int(str) { }
+  virtual void apply(TH1* h) const {
+    h->SetLineColor(x);
+  }
+};
+
+struct prop_LineWidth: public prop_int {
+  prop_LineWidth(const string& str): prop_int(str) { }
+  virtual void apply(TH1* h) const {
+    h->SetLineWidth(x);
+  }
+};
+
+pair<prop_t,const prop*> mkprop(const string& str) {
+  prop_t type;
+  const prop* p;
+
+  size_t sep = str.find_first_of(":");
+  pair<string,string> ps(
+    boost::algorithm::trim_copy(str.substr(0,sep)),
+    boost::algorithm::trim_copy(str.substr(sep+1))
+  );
+
+  if (!ps.first.compare("Bins")) {
+    type = kBins;
+    p = new const prop_Bins_range(ps.second);
+  } else if (!ps.first.compare("Bins*")) {
+    type = kBins;
+    p = new const prop_Bins_vals(ps.second);
+  } else if (!ps.first.compare("LineColor")) {
+    type = kLineColor;
+    p = new const prop_LineColor(ps.second);
+  } else if (!ps.first.compare("LineWidth")) {
+    type = kLineWidth;
+    p = new const prop_LineWidth(ps.second);
+  } else throw runtime_error(
+    "undefined property "+ps.first
+  );
+
+  return make_pair(type,p);
+}
+
+typedef boost::unordered_map<prop_t, const prop*> prop_map;
 
 // PIMPL ************************************************************
 
 struct csshists::impl {
-  vector< pair< boost::regex*,vector<prop*> > > rules;
+  vector< pair<const boost::regex*,prop_map*> > rules;
 
-  /*~impl() {
+  ~impl() {
     for (size_t i=0,n=rules.size();i<n;++i) {
       delete rules[i].first;
+      for (prop_map::iterator it=rules[i].second->begin(),
+           end=rules[i].second->end();it!=end;++it)
+      {
+        delete it->second;
+      }
       delete rules[i].second;
     }
-  }*/
+  }
+
+  typedef vector< pair<const boost::regex*,prop_map*> >::iterator iter;
 };
 
 // Constructor ******************************************************
@@ -97,34 +182,76 @@ csshists::csshists(const string& cssfilename)
     if (rule_str[i].second.size()==0) continue; // skip blank rule
 
     _impl->rules.push_back( make_pair(
-      new boost::regex( rule_str[i].first ),
-      vector<prop*>()
+      new const boost::regex( rule_str[i].first ),
+      new prop_map()
     ) );
-    _impl->rules.back().second.reserve( rule_str[i].second.size() );
+    //_impl->rules.back().second.reserve( rule_str[i].second.size() );
     for (size_t j=0,m=rule_str[i].second.size();j<m;++j) {
       const string& prop_str = rule_str[i].second[j];
       if (prop_str.size()==0) continue; // skip blank property
 
-      _impl->rules.back().second.push_back(
-        new prop( prop_str )
-      );
+      _impl->rules.back().second->insert( mkprop( prop_str ) );
     }
   }
   
 
   // Test print
-  for (size_t i=0,n=_impl->rules.size();i<n;++i) {
-    cout << _impl->rules[i].first->str() << endl;
-    for (size_t j=0,m=_impl->rules[i].second.size();j<m;++j)
-      cout <<j<<". " << _impl->rules[i].second[j]->str <<';'<< endl;
-    cout << "-----------" << endl;
-  }
+  //for (size_t i=0,n=_impl->rules.size();i<n;++i) {
+  //  cout << _impl->rules[i].first->str() << endl;
+  //  for (prop_map::iterator j=_impl->rules[i].second.begin(),
+  //       m=_impl->rules[i].second.end();j!=m;++j)
+  //    cout << j->first <<' '<< j->second->str << endl;
+  //    //cout <<j<<". " << _impl->rules[i].second[j]->str <<';'<< endl;
+  //  cout << "-----------" << endl;
+  //}
 }
 
 // Make Historgram **************************************************
 
 TH1* csshists::mkhist(const std::string& name) const {
-  return NULL;
+  prop_map props;
+  TH1* h;
+
+  boost::smatch result;
+  for (impl::iter it=_impl->rules.begin(),
+       end=_impl->rules.end();it!=end;++it) {
+    test(name)
+    test(it->first->str())
+    if (boost::regex_match(name, result, *it->first,
+                           boost::match_default | boost::match_partial))
+      if(result[0].matched) {
+        test(it->first->str())
+        for (prop_map::iterator jt=it->second->begin(),
+             end2=it->second->end();jt!=end2;++jt)
+          props[jt->first] = jt->second;
+      }
+  }
+
+  if (!props.size()) throw runtime_error(
+    "no rules matched for histogram \""+name+"\""
+  );
+
+  if (!props.count(kBins)) throw runtime_error(
+    "cannot find binning for histogram \""+name+"\""
+  );
+  if (static_cast<const prop_Bins*>(props[kBins])->isrange) {
+    const prop_Bins_range* b
+      = static_cast<const prop_Bins_range*>(props[kBins]);
+
+    h = new TH1F(name.c_str(),"",b->nbinsx,b->xlow,b->xup);
+
+  } else {
+    const prop_Bins_vals* b
+      = static_cast<const prop_Bins_vals*>(props[kBins]);
+
+    h = new TH1F(name.c_str(),"",b->xbins.size(),&b->xbins[0]);
+  }
+  props.erase(kBins);
+
+  for (prop_map::iterator it=props.begin(),end=props.end();it!=end;++it)
+    it->second->apply(h);
+
+  return h;
 }
 
 // Destructor *******************************************************
