@@ -1,9 +1,11 @@
-#ifndef mithril_hist_css_h
-#define mithril_hist_css_h
+#ifndef flock_csshists_h
+#define flock_csshists_h
 
 #include <string>
 
 class TH1;
+
+namespace flock {
 
 class csshists {
   class impl;
@@ -15,5 +17,7 @@ public:
 
   TH1* mkhist(const std::string& name) const;
 };
+
+}
 
 #endif

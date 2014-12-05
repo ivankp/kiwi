@@ -3,9 +3,10 @@
 
 #include <TH1.h>
 
-#include "hist_css.h"
+#include "csshists.h"
 
 using namespace std;
+using namespace flock;
 
 #define test(var) \
   cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << endl;

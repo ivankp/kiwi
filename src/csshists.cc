@@ -1,4 +1,4 @@
-#include "hist_css.h"
+#include "csshists.h"
 
 #include <iostream>
 #include <fstream>
@@ -16,6 +16,8 @@ using namespace std;
 
 #define test(var) \
   cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << endl;
+
+namespace flock {
 
 // Properties *******************************************************
 
@@ -175,7 +177,7 @@ csshists::csshists(const string& cssfilename)
 : _impl( new impl )
 {
   // Read CSS file
-  ifstream css(cssfilename);
+  ifstream css(cssfilename.c_str());
   char c;
   bool brak=false, q1=false, q2=false;
   vector< pair< string, vector<string> > > rule_str(1);
@@ -336,3 +338,5 @@ TH1* csshists::mkhist(const string& name) const {
 // Destructor *******************************************************
 
 csshists::~csshists() { delete _impl; }
+
+} // end flock namespace
