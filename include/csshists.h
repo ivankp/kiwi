@@ -1,11 +1,11 @@
-#ifndef flock_csshists_h
-#define flock_csshists_h
+#ifndef kiwi_csshists_h
+#define kiwi_csshists_h
 
 #include <string>
 
 class TH1;
 
-namespace flock {
+namespace kiwi {
 
 class csshists {
   class impl;

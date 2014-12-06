@@ -10,15 +10,16 @@ ROOT_LIBS   := $(shell root-config --libs)
 
 .PHONY: all clean install
 
-DYNM := lib/libflockhist.so
-STAT := lib/libflockhist.a
+DYNM := lib/libkiwihist.so
+STAT := lib/libkiwihist.a
 TEST := bin/test_csshists
 
 all: $(DIRS) $(STAT) $(TEST)
 
 install:
 	cp $(STAT) $(prefix)/lib/
-	cp -r include $(prefix)/include/flock
+	mkdir -p $(prefix)/include/kiwi
+	cp -r include/* $(prefix)/include/kiwi/
 
 # directories rule
 $(DIRS):
@@ -30,11 +31,11 @@ obj/csshists.o: obj/%.o: src/%.cc include/%.h
 	@$(CPP) $(CFLAGS) $(ROOT_CFLAGS) -c $(filter %.cc,$^) -o $@
 
 # static library rules
-lib/libflockhist.a: lib/%.a: obj/csshists.o
+lib/libkiwihist.a: lib/%.a: obj/csshists.o
 	ar rvs $@ $(filter %.o,$^)
 
 # shared library rules
-lib/libflockhist.so: lib/%.so: obj/csshists.o
+lib/libkiwihist.so: lib/%.so: obj/csshists.o
 	@echo -e "Linking \E[0;49;96m"$@"\E[0;0m"
 	@$(CPP) -shared $(filter %.o,$^) -o lib/$*.so
 
@@ -46,7 +47,7 @@ obj/test_csshists.o: obj/%.o: test/%.cc
 # executable rules
 bin/test_csshists: bin/%: obj/%.o
 	@echo -e "Linking \E[0;49;92m"$@"\E[0;0m"
-	@$(CPP) -Wl,--no-as-needed $(filter %.o,$^) -o $@ $(ROOT_LIBS) -Llib -lflockhist -lboost_regex
+	@$(CPP) -Wl,--no-as-needed $(filter %.o,$^) -o $@ $(ROOT_LIBS) -Llib -lkiwihist -lboost_regex
 
 # OBJ dependencies
 
@@ -54,7 +55,7 @@ bin/test_csshists: bin/%: obj/%.o
 obj/test_csshists.o: include/csshists.h
 
 # EXE dependencies
-bin/test_csshists  : lib/libflockhist.a
+bin/test_csshists  : lib/libkiwihist.a
 
 clean:
 	rm -rf $(DIRS)

@@ -6,7 +6,7 @@
 #include "csshists.h"
 
 using namespace std;
-using namespace flock;
+using namespace kiwi;
 
 #define test(var) \
   cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << endl;
