@@ -12,7 +12,7 @@ ROOT_LIBS   := $(shell root-config --libs)
 
 DYNM := lib/libkiwihist.so
 STAT := lib/libkiwihist.a
-TEST := bin/test_csshists
+TEST := bin/test_csshists bin/test_propmap
 
 all: $(DIRS) $(STAT) $(TEST)
 
@@ -42,17 +42,26 @@ lib/libkiwihist.so: lib/%.so: obj/csshists.o
 # main object rules
 obj/test_csshists.o: obj/%.o: test/%.cc
 	@echo -e "Compiling \E[0;49;94m"$@"\E[0;0m"
-	@$(CPP) $(CFLAGS) $(ROOT_CFLAGS) $(MAGIC_CFLAGS) -c $(filter %.cc,$^) -o $@
+	@$(CPP) $(CFLAGS) $(ROOT_CFLAGS) -c $(filter %.cc,$^) -o $@
+
+obj/test_propmap.o: obj/%.o: test/%.cc
+	@echo -e "Compiling \E[0;49;94m"$@"\E[0;0m"
+	@$(CPP) $(CFLAGS) $(ROOT_CFLAGS) -c $(filter %.cc,$^) -o $@
 
 # executable rules
 bin/test_csshists: bin/%: obj/%.o
 	@echo -e "Linking \E[0;49;92m"$@"\E[0;0m"
 	@$(CPP) -Wl,--no-as-needed $(filter %.o,$^) -o $@ $(ROOT_LIBS) -Llib -lkiwihist -lboost_regex
 
+bin/test_propmap: bin/%: obj/%.o
+	@echo -e "Linking \E[0;49;92m"$@"\E[0;0m"
+	@$(CPP) $(filter %.o,$^) -o $@
+
 # OBJ dependencies
 
 # EXE_OBJ dependencies
 obj/test_csshists.o: include/csshists.h
+obj/test_propmap.o : include/propmap.h
 
 # EXE dependencies
 bin/test_csshists  : lib/libkiwihist.a
